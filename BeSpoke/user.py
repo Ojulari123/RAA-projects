@@ -1,6 +1,13 @@
 import json
+import os
 
 def ask_details():
+    if os.path.exists("user.json"):
+        with open("user.json", "r") as file:
+            user = json.load(file)
+    else:
+        user = []
+
     fname = input("Enter your first name: ")
     lname = input("Enter your last name: ")
     address = input("Enter your Email Address: ")
@@ -12,21 +19,22 @@ def ask_details():
         "email": address,
         "password": password
         }
-
-
-    json_object = json.dumps(dic, indent=4)
+    user.append(dic)
 
     with open("user.json", "w") as file:
-        file.write(json_object)
+        file.write(json.dumps(user, indent=4))
 
 def sign_in():
+    if os.path.exists("user.json"):
+        with open("user.json", "r") as file:
+            user = json.load(file)
+    else:
+        user = []
+
     address = input("\nEnter your Email Address to sign-in: ")
     password = input("Enter your password to sign-in: ")
-    json_file = open("user.json", "r")
-    json_read = json_file.read()
-    obj = json.loads(json_read)
 
-    if (address != str(obj["email"])) or (password != str(obj["password"])) :
+    if (address != str(user["email"])) or (password != str(user["password"])):
         print("Wrong Info. Kindly try again :)")
         address = input("\nEnter your Email Address to sign-in: ")
         password = input("Enter your password to sign-in: ")
@@ -34,23 +42,31 @@ def sign_in():
         print("Welcome!!")
 
 def add_products():
+    if os.path.exists("products.json"):
+        with open("products.json", "r") as file:
+            products = json.load(file)
+    else:
+        products = []
+
     while True:
         ans = input("\nWould you like to add products?(y/n): ")
-        if ans == "y" or ans == "Y":
+        if ans.lower() == "y":
             product = input("Enter the product to be added: ")
             price = input("Enter the price of the product to be added: ")
             quantity = input("Enter the quantity to be added:")
+
             dic = {
                 "product": product,
                 "price": price,
                 "quantity": quantity
             }
+            products.append(dic)
 
-            json_object = json.dumps(dic, indent=4)
             with open("products.json", "w") as file:
-                file.write(json_object)
+                file.write(json.dumps(products, indent=4))
 
-        elif ans == "n" or ans == "N":
+
+        elif ans.lower() == "n":
             print("Thank you for visiting my store :)")
             break
         else:

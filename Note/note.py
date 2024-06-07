@@ -1,5 +1,6 @@
 from datetime import datetime
 from datetime import date
+
 def greet_user():
      name = input("Hello what is your name? ")
      print(f"Welcome, {name}\n")
@@ -25,10 +26,9 @@ def add_notes():
             if notes.lower() == 'exit':
                 print("Exiting and saving your notes")
                 break
-            file.write(notes + "\n")
             time = datetime.now()
-            timestamp = time.strftime("%y-%m-%d %H:%M %p")
-            print(timestamp + " => " + notes)
+            timestamp = time.strftime("%y-%m-%d : %H:%M %p")
+            file.write(timestamp + " " + notes + "\n")
             print("Note added! Type 'exit' to quit or continue adding notes.")
 
 def print_notes():

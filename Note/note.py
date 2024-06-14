@@ -1,16 +1,10 @@
 from datetime import datetime
 from datetime import date
+import os
+import json
 
 def greet_user():
-     name = input("Hello what is your name? ")
-     print(f"Welcome, {name}\n")
-
-def ask_age():
-    todays_date = date.today()
-    current_year = todays_date.year
-    birth_year = int(input("Whats your DOB? "))
-    age = current_year - birth_year
-    print(f"Your age, {age}\n")
+     print("Welcome!!!\n")
 
 def show_instructions():
     print("These are the instructions on how to use this note taking program")
@@ -19,28 +13,49 @@ def show_instructions():
     print("To exit the program, type 'exit' and press Enter.")
 
 def add_notes():
-    print("\nStart taking notes")
-    with open("notes.txt","a") as file:
-        while True:
-            notes = input("Enter your note: ")
-            if notes.lower() == 'exit':
-                print("Exiting and saving your notes")
-                break
-            time = datetime.now()
-            timestamp = time.strftime("%y-%m-%d : %H:%M %p")
-            file.write(timestamp + " " + notes + "\n")
-            print("Note added! Type 'exit' to quit or continue adding notes.")
+    if os.path.exists("notes.json"):
+         with open("notes.json","r") as file:
+            read_note = json.load(file)
+            if "notes" not in read_note:
+                read_note = {
+                    "notes" : []
+                }
+            
+    else:
+        read_note = {
+            "notes" : []
+        }
+   
+    name = input("Enter your name: ")
+    year_of_birth = int(input("Enter your DOB: "))
 
+    read_note["name"] = name
+    read_note["DOB"] = year_of_birth
+    
+    while True:
+        notes = input("Start taking notes: ")
+
+        if notes.lower() == "exit":
+            print("Exiting and saving your note")
+            break
+        time = datetime.now()
+        timestamp = time.strftime("%y-%m-%d : %H:%M %p")
+        user_note = {
+            timestamp : notes
+        }
+        read_note["notes"].append(user_note)
+        print("Note added! Type 'exit' to quit or continue adding notes.")
+
+    with open("notes.json","w") as file:
+        file.write(json.dumps(read_note, indent=4))
+    
 def print_notes():
         print("These are all your notes: \n")
-        with open("notes.txt","r") as file:
-            print_file = file.readlines()
-            for i in print_file:
-                print(i)
-
+        with open("notes.json","r") as file:
+           note_data = json.load(file)
+           print(note_data)
 def main():
-    name = greet_user()
-    ask_age()
+    greet_user()
     show_instructions()
     add_notes()
     print_notes()

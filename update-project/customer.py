@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, create_engine, DateTime, Foreign
 from sqlalchemy.orm import sessionmaker, Session,relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
+import json
 app = FastAPI()
 
 SECRET_KEY = "admin"
@@ -13,6 +13,7 @@ engine = create_engine("sqlite:///customer.db", connect_args={"check_same_thread
 Local_Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
+<<<<<<< HEAD
 class User(Base):
     __tablename__ = "User"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -47,6 +48,15 @@ class UserClass(BaseModel):
     password: str
 
 
+=======
+class Convo(Base):
+    __tablename__ = "customer"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    admin = Column(String(2000))
+    customer = Column(String(2000))
+    date = Column(DateTime, default=datetime.now)
+
+>>>>>>> 7dc0d615e0265870afd2b8b360d10ccdffa2413c
 class convoClass(BaseModel):
     customer_username: str
     admin: str
@@ -61,6 +71,7 @@ PRODUCTS = [
     {"id": 6, "product": "Purple Sweater", "Price": "65"}
 ]
 
+conversation_dict = {}
 Base.metadata.create_all(engine)
 
 def get_db():
@@ -70,6 +81,7 @@ def get_db():
     finally:
         db.close()
 
+
 @app.get("/")
 def root():
     return "Welcome"
@@ -78,6 +90,7 @@ def root():
 def products():
     return PRODUCTS
 
+<<<<<<< HEAD
 @app.post("/customer-info")
 async def get_customer_info(user:UserClass, db:Session = Depends(get_db)):
      
@@ -124,6 +137,8 @@ async def delete_customers(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Customers has been deleted"}
 
+=======
+>>>>>>> 7dc0d615e0265870afd2b8b360d10ccdffa2413c
 @app.post("/conversation")
 async def convo(text: convoClass, db: Session = Depends(get_db)):
     convo_username = db.query(Convo).filter(Convo.customer_username==text.customer_username).first()
@@ -142,10 +157,13 @@ async def convo(text: convoClass, db: Session = Depends(get_db)):
     db.refresh(convo)
     return {"conversation": convo}
 
+<<<<<<< HEAD
 @app.get("/retrieve-conversation/{customer_username}")
 async def retrieve_conversation_username(username: str, db: Session = Depends(get_db)):
     conversation_query = db.query(Convo).filter(Convo.customer_username==username).all()
     return {"customer Info" : conversation_query}
+=======
+>>>>>>> 7dc0d615e0265870afd2b8b360d10ccdffa2413c
 
 @app.get("/retrieve-current-conversation")
 async def current_conversation(db: Session = Depends(get_db)):
@@ -157,11 +175,14 @@ async def conversation(db: Session = Depends(get_db)):
     convos = db.query(Convo).all()
     return {"conversation": convos}
 
+<<<<<<< HEAD
 @app.get("/retrieve-conversation/{token}")
 async def retrieve_conversation_token(token: str, db: Session = Depends(get_db)):
     convo_query = db.query(Convo).filter(Convo.user_token==token).all()
     return {"conversation": convo_query}
 
+=======
+>>>>>>> 7dc0d615e0265870afd2b8b360d10ccdffa2413c
 @app.delete("/delete-conversation/{conversation_id}")
 async def delete_select_conversation(conversation_id: int, db: Session = Depends(get_db)):
     db.query(Convo).filter(Convo.id == conversation_id).delete()
@@ -172,6 +193,10 @@ async def delete_select_conversation(conversation_id: int, db: Session = Depends
 async def delete_current_conversations(db: Session = Depends(get_db)):
     db.query(Convo).delete()
     db.commit()
+<<<<<<< HEAD
+=======
+    conversation_dict.clear()
+>>>>>>> 7dc0d615e0265870afd2b8b360d10ccdffa2413c
     return {"message": "Current conversation have been deleted"}
 
 @app.delete("/delete-conversation")

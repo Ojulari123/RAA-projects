@@ -8,28 +8,29 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
     <div class = "background">
+        <h1>Simple Sign In Page</h1>
         <div class = "wrapper">
             <form action="">
                 <div class ="page one">
-                    <h1>SIGN IN</h1>
-                    <p>Email Address</p>
-                    <div class="input-box">
-                        <input type="text" placeholder="Email" required>
-                        <i class='bx bxs-user'></i>
+                    <div class="page-one content">
+                        <h1>Sign in to your account</h1>
+                        <p>Email Address</p>
+                        <div class="input-box">
+                            <input type="text" placeholder="Email" required>
+                        </div>
+                        <p>Password</p>
+                        <div class="input-box">
+                            <input type="password" placeholder="Password" required>
+                        </div>
+                        <div class="remember">
+                            <label><input type="checkbox"> Remember Me</label>
+                        </div>
+                        <div class="submit-box">
+                            <button type="submit" class="btn">Login</button>
+                            <a href="*">Forgot Password?</a>
                     </div>
-                    <p>Password</p>
-                    <div class="input-box">
-                        <input type="password" placeholder="Password" required>
-                        <i class='bx bxs-lock-alt' ></i>
-                    </div>
-                    <div class="remember">
-                        <label><input type="checkbox"> Remember Me</label>
-                    </div>
-                    <div class="submit-box">
-                        <button type="submit" class="btn">Login</button>
-                        <a href="*">Forgot Password?</a>
-                    </div>
-                    <a href="#">Do not have an account?, Sign-up</a>
+                    </div class="page-one">
+                        <p>Do not have an account? <a href="#">Sign-up</a></p>
                 </div>
             </form>
         </div>

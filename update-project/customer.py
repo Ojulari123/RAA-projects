@@ -248,6 +248,9 @@ async def view_all_products(db: Session = Depends(get_db)):
 
 @app.post("/input-new-products")
 async def input_new_products(text: ProductClass, db: Session = Depends(get_db)):
+    new_product_query = db.query(Products).filter(Products.product_name==text.product_name).first()
+    if new_product_query:
+        raise HTTPException(status_code=400, detail="Existing product")
     new_product = Products(
         product_name=text.product_name,
         product_price=text.product_price

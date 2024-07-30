@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, create_engine, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -39,18 +39,19 @@ class User(Base):
     date = Column(DateTime, default=datetime.now)
 
     username_relationship = relationship("Convo", primaryjoin="User.username == Convo.customer_username", back_populates="username_rel")
-    id_relationship = relationship("Convo", primaryjoin="User.id == Convo.id", back_populates="id_rel")
+    id_relationship = relationship("Convo", primaryjoin="User.id == Convo.customer_user_id", back_populates="customer_user")
 
 class Convo(Base):
     __tablename__ = "Conversation"
-    id = Column(Integer, ForeignKey("User.id"), primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     admin_message = Column(String(2000))
     customer_message = Column(String(2000))
     customer_username = Column(String(256), ForeignKey("User.username"), nullable=False)
     date = Column(DateTime, default=datetime.now)
-
+    customer_user_id = Column(ForeignKey("User.id"))
+    customer_user = relationship("User", foreign_keys=[customer_user_id], back_populates="id_relationship")
     username_rel = relationship("User", foreign_keys=[customer_username], back_populates="username_relationship")
-    id_rel = relationship("User", foreign_keys=[id], back_populates="id_relationship")
+    
 
 class Products(Base):
     __tablename__ = "Products"
@@ -122,7 +123,9 @@ async def auth_user(db: Session, username: str, password: str):
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
+    print(datetime.now(), expire, expires_delta)
     to_encode.update({"exp": expire})
+    print(to_encode)
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -134,7 +137,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 def get_user_by_username(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
+    return db.query(User).filter(User.username.ilike(f'%{username}%')).first()
 
 async def auth_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credential_exception = HTTPException(
@@ -144,13 +147,16 @@ async def auth_current_user(token: str = Depends(oauth2_scheme), db: Session = D
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(payload)
         username: str = payload.get("sub")
         if username is None:
             raise credential_exception
         token_data = TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        print(e)
         raise credential_exception
     user = get_user_by_username(db, username=token_data.username)
+    print(user)
     if user is None:
         raise credential_exception
     return user
@@ -368,7 +374,7 @@ async def convo(text: ConvoClass, db: Session = Depends(get_db), user: User = De
     if not user_inst:
         raise HTTPException(status_code=400, detail="You have to sign-in")
 
-    convo = Convo(customer_username=text.customer_username, admin_message=text.admin_message, customer_message=text.customer_message)
+    convo = Convo(customer_username=text.customer_username, admin_message=text.admin_message, customer_message=text.customer_message,customer_user_id=user_inst.id)
 
     db.add(convo)
     db.commit()
@@ -385,15 +391,11 @@ async def conversation(user: User = Depends(auth_current_user), db: Session = De
     convos = db.query(Convo).all()
     return {"conversation": convos}
 
-@app.get("/retrieve-conversation/{id}")
-async def retrieve_conversation_token(id: int, user: User = Depends(auth_current_user), db: Session = Depends(get_db)):
+@app.get("/retrieve-conversation/{user_id}")
+async def retrieve_conversation_token(user_id: int, user: User = Depends(auth_current_user), db: Session = Depends(get_db)):
     await role_checker(required_role="admin", user=user)
-    user_query = db.query(User).filter(User.id == id).first()
-    if user_query:
-        convo_query = db.query(Convo).filter(Convo.customer_username == user_query.username).all()
-    else:
-        raise HTTPException(status_code=400, detail="Invalid ID provided")
-    return {"conversation": convo_query}
+    user_convo_query = db.query(Convo).join(Convo.customer_user).filter(Convo.customer_user_id == user_id).all()
+    return {"conversation": user_convo_query}
 
 @app.get("/retrieve-conversation-username/{username}")
 async def retrieve_conversation_username(username: str, user: User = Depends(auth_current_user), db: Session = Depends(get_db)):

@@ -1,5 +1,4 @@
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, File
-from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, LargeBinary, create_engine, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -9,7 +8,9 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
 import os
+from typing import List
 from dotenv import load_dotenv
+from schemas import UserSignUpInfo, UserResponse, ConvoClass, SignIn, Token, TokenData, TokenResponse, UserInDB, ProductClass
 # from fastapi.templating import Jinja2Templates
 
 load_dotenv()
@@ -22,7 +23,6 @@ engine = create_engine("sqlite:///customer.db", connect_args={"check_same_thread
 Local_Session = sessionmaker(bind=engine)
 Base = declarative_base()
 # templates =Jinja2Templates(directory="Templates")
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -61,50 +61,6 @@ class Products(Base):
     product_price = Column(Integer)
     product_description = Column(String(256))
     
-
-class UserSignUpInfo(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    username: str
-    password: str
-
-class UserResponse(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    username: str
-
-class ConvoClass(BaseModel):
-    customer_username: str
-    admin_message: str
-    customer_message: str
-
-class SignIn(BaseModel):
-    username: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: str
-
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "Bearer"
-    expires_in: int
-
-class UserInDB(UserSignUpInfo):
-    hashed_password: str
-
-class ProductClass(BaseModel):
-    product_name: str
-    product_price: int
-    product_description: str
-
 Base.metadata.create_all(engine)
 
 app = FastAPI()
@@ -373,7 +329,7 @@ async def change_role(id: int, role: str, db: Session = Depends(get_db), user: U
     return {"message": "User Role Updated"}
 
 @app.get("/retrieve-all-customer-details")
-async def retrieve_all_customer_details(db: Session = Depends(get_db), user: User = Depends(auth_current_user)):
+async def retrieve_all_customer_details(db: Session = Depends(get_db), user: User = Depends(auth_current_user),response_model=List[UserResponse]):
     await role_checker(required_role="admin", user=user)
     customer_details = db.query(User).all()
     customer_details_list = []
@@ -392,11 +348,11 @@ async def retrieve_all_customer_details(db: Session = Depends(get_db), user: Use
 
 
 @app.get("/retrieve-customer-detail/{username}")
-async def retrieve_customer_detail_by_username(username: str, db: Session = Depends(get_db), user: User = Depends(auth_current_user)):
+async def retrieve_customer_detail_by_username(username: str, db: Session = Depends(get_db), user: User = Depends(auth_current_user),response_model=List[UserResponse]):
     await role_checker(required_role="admin", user=user)
     customer_details = db.query(User).filter(User.username == username).all()
     customer_details_list = []
-    
+
     for customer in customer_details:
         load_customer_details_username = {
             "id": customer.id,

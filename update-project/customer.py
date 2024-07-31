@@ -1,6 +1,6 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, create_engine, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, LargeBinary, create_engine, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timedelta, UTC
@@ -56,8 +56,11 @@ class Convo(Base):
 class Products(Base):
     __tablename__ = "Products"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    product_name = Column(String(256), nullable=False)
-    product_price = Column(Integer, nullable=False)
+    product_name = Column(String(256))
+    product_content = Column(LargeBinary)
+    product_price = Column(Integer)
+    product_description = Column(String(256))
+    
 
 class UserSignUpInfo(BaseModel):
     first_name: str
@@ -65,6 +68,12 @@ class UserSignUpInfo(BaseModel):
     email: str
     username: str
     password: str
+
+class UserResponse(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    username: str
 
 class ConvoClass(BaseModel):
     customer_username: str
@@ -94,6 +103,7 @@ class UserInDB(UserSignUpInfo):
 class ProductClass(BaseModel):
     product_name: str
     product_price: int
+    product_description: str
 
 Base.metadata.create_all(engine)
 
@@ -137,7 +147,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 def get_user_by_username(db: Session, username: str):
-    return db.query(User).filter(User.username.ilike(f'%{username}%')).first()
+    return db.query(User).filter(User.username.ilike(username)).first()
 
 async def auth_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credential_exception = HTTPException(
@@ -252,19 +262,39 @@ async def view_all_products(db: Session = Depends(get_db)):
     products = db.query(Products).all()
     return products
 
-@app.post("/input-new-products")
-async def input_new_products(text: ProductClass, db: Session = Depends(get_db)):
-    new_product_query = db.query(Products).filter(Products.product_name==text.product_name).first()
-    if new_product_query:
-        raise HTTPException(status_code=400, detail="Existing product")
-    new_product = Products(
-        product_name=text.product_name,
-        product_price=text.product_price
-    )
-    db.add(new_product)
+@app.post("/input-desc-of-products/{product_id}")
+async def input_desc_of_products(product_id: int, text: ProductClass, db: Session = Depends(get_db),user: User = Depends(auth_current_user)):
+    await role_checker(required_role="admin", user=user)
+    product_info = db.query(Products).filter(Products.id==product_id).first()
+
+    if not product_info:
+        raise HTTPException(status_code=400, detail="This Product doesnt exist")
+
+    product_info.product_name = text.product_name
+    product_info.product_price = text.product_price
+    product_info.product_description = text.product_description
+    
+    db.add(product_info)
     db.commit()
-    db.refresh(new_product)
-    return {"message": "New Product Added!"}
+    db.refresh(product_info)
+    return {"message": product_info}
+
+
+@app.post("/input-cont-of-products")
+async def input_cont_of_products(file: UploadFile = File(...), db: Session = Depends(get_db),user: User = Depends(auth_current_user)):
+    await role_checker(required_role="admin", user=user)
+    product_data = file.file.read()
+    new_product_img = Products(product_content = product_data)
+    
+    db.add(new_product_img)
+    db.commit()
+    db.refresh(new_product_img)
+    return {"New Product": new_product_img}
+
+@app.get("/get-products-by/{product_id}")
+async def get_product_by_id(product_id: int, db: Session = Depends(auth_current_user)):
+    get_product_id = db.query(Products).filter(Products.id==product_id).first()
+    return get_product_id
 
 @app.post("/customer-info", response_model=Token)
 async def add_customer_info(user: UserSignUpInfo, db: Session = Depends(get_db)):
@@ -346,12 +376,37 @@ async def change_role(id: int, role: str, db: Session = Depends(get_db), user: U
 async def retrieve_all_customer_details(db: Session = Depends(get_db), user: User = Depends(auth_current_user)):
     await role_checker(required_role="admin", user=user)
     customer_details = db.query(User).all()
-    return {"conversation": customer_details}
+    customer_details_list = []
+    
+    for customer in customer_details:
+        load_customer_details = {
+            "id": customer.id,
+            "first_name": customer.first_name,
+            "last_name": customer.last_name,
+            "email": customer.email,
+            "username": customer.username,
+        }
+        customer_details_list.append(load_customer_details)
+
+    return {"customer_details": customer_details_list}
+
 
 @app.get("/retrieve-customer-detail/{username}")
 async def retrieve_customer_detail_by_username(username: str, db: Session = Depends(get_db), user: User = Depends(auth_current_user)):
     await role_checker(required_role="admin", user=user)
     customer_details = db.query(User).filter(User.username == username).all()
+    customer_details_list = []
+    
+    for customer in customer_details:
+        load_customer_details_username = {
+            "id": customer.id,
+            "first_name": customer.first_name,
+            "last_name": customer.last_name,
+            "email": customer.email,
+            "username": customer.username,
+        }
+        customer_details_list.append(load_customer_details_username)
+
     return {"customer Info": customer_details}
 
 @app.delete("/delete-customer/{customer_id}")
